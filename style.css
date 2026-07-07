@@ -1,0 +1,58 @@
+/* Reset básico e tipografia */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background-color: #000;
+    color: #fff;
+    font-family: 'Courier New', Courier, monospace;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    overflow: hidden;
+}
+
+/* Container do Jogo centralizado */
+.game-container {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+}
+
+/* Título em neon estilo Arcade */
+h1 {
+    font-size: 2.5rem;
+    letter-spacing: 6px;
+    color: #ffff00;
+    text-shadow: 0 0 8px rgba(255, 255, 0, 0.7);
+}
+
+/* Placar */
+.score-board {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #00ff00;
+    letter-spacing: 2px;
+}
+
+/* O Canvas com efeito de monitor CRT de fliperama */
+canvas {
+    border: 4px solid #0000ff;
+    border-radius: 4px;
+    box-shadow: 0 0 20px rgba(0, 0, 255, 0.5);
+    background-color: #111;
+}
+
+/* Rodapé com instruções */
+.instructions {
+    font-size: 0.9rem;
+    color: #888;
+    margin-top: 5px;
+    text-transform: uppercase;
+}
