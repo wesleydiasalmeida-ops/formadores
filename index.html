@@ -3,10 +3,194 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Título da sua Página</title>
+    <title>Pac-Man Clone - Especialista JS/CSS</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1>Olá, mundo!</h1>
-    <p>teste.1234566</p>
+
+    <div class="game-container">
+        <h1>PAC-MAN</h1>
+        <div class="score-board">SCORE: <span id="score">0</span></div>
+        <canvas id="canvas" width="400" height="400"></canvas>
+        <div class="instructions">Use as setas (⬅️ ⬆️ ➡️ ⬇️) para jogar</div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score');
+
+        const SIZE = 20; // Tamanho de cada bloco/grid
+        let score = 0;
+        let gameOver = false;
+
+        // Mapa do labirinto (1 = Parede, 0 = Pastilha, 2 = Vazio)
+        const map = [
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+            [1,0,0,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,0,1],
+            [1,0,1,1,1,0,1,0,1,1,1,1,0,1,0,1,1,1,0,1],
+            [1,0,1,2,1,0,0,0,1,2,2,1,0,0,0,1,2,1,0,1],
+            [1,0,1,1,1,0,1,0,1,1,1,1,0,1,0,1,1,1,0,1],
+            [1,0,0,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,0,1],
+            [1,1,1,0,1,1,1,1,1,0,0,1,1,1,1,1,0,1,1,1],
+            [2,2,1,0,1,2,2,2,1,0,0,1,2,2,2,1,0,1,2,2],
+            [1,1,1,0,1,2,1,2,1,1,1,1,2,1,2,1,0,1,1,1],
+            [1,0,0,0,0,2,1,2,2,2,2,2,2,1,2,0,0,0,0,1],
+            [1,1,1,0,1,2,1,1,1,1,1,1,1,1,2,1,0,1,1,1],
+            [2,2,1,0,1,2,2,2,2,2,2,2,2,2,2,1,0,1,2,2],
+            [1,1,1,0,1,2,1,1,1,1,1,1,1,1,2,1,0,1,1,1],
+            [1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1],
+            [1,0,1,1,0,1,1,1,1,0,1,0,1,1,1,1,0,1,1,1],
+            [1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1],
+            [1,1,0,1,0,1,0,1,1,1,1,1,1,0,1,0,0,1,0,1],
+            [1,0,0,0,0,1,0,0,0,0,0,0,0,0,1,0,0,0,0,1],
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+        ];
+
+        // Personagem principal (Pac-Man)
+        const pacman = {
+            x: 1, y: 1, // Posição na matriz do grid
+            dx: 0, dy: 0,
+            nextDx: 0, nextDy: 0,
+            angle: 0
+        };
+
+        // Inimigo (Fantasma Blinky)
+        const ghost = {
+            x: 9, y: 9,
+            dx: 1, dy: 0,
+            color: '#FF0000'
+        };
+
+        // Captura os comandos do teclado
+        window.addEventListener('keydown', e => {
+            switch(e.key) {
+                case 'ArrowUp':    pacman.nextDx = 0;  pacman.nextDy = -1; break;
+                case 'ArrowDown':  pacman.nextDx = 0;  pacman.nextDy = 1;  break;
+                case 'ArrowLeft':  pacman.nextDx = -1; pacman.nextDy = 0;  break;
+                case 'ArrowRight': pacman.nextDx = 1;  pacman.nextDy = 0;  break;
+            }
+        });
+
+        function checkCollision(x, y) {
+            // Se tentar sair do mapa verticalmente ou colidir com parede (1)
+            if (y < 0 || y >= map.length || x < 0 || x >= map[0].length) return true;
+            return map[y][x] === 1;
+        }
+
+        function update() {
+            if (gameOver) return;
+
+            // Movimento bufferizado do Pac-man (muda de direção assim que possível)
+            if (!checkCollision(pacman.x + pacman.nextDx, pacman.y + pacman.nextDy)) {
+                pacman.dx = pacman.nextDx;
+                pacman.dy = pacman.nextDy;
+            }
+
+            // Move o Pac-man se não houver colisão à frente
+            if (!checkCollision(pacman.x + pacman.dx, pacman.y + pacman.dy)) {
+                pacman.x += pacman.dx;
+                pacman.y += pacman.dy;
+            }
+
+            // Atualiza o ângulo visual do Pac-man baseado no movimento
+            if (pacman.dx === 1) pacman.angle = 0;
+            if (pacman.dx === -1) pacman.angle = Math.PI;
+            if (pacman.dy === 1) pacman.angle = Math.PI / 2;
+            if (pacman.dy === -1) pacman.angle = Math.PI * 1.5;
+
+            // Coleta de pastilhas
+            if (map[pacman.y][pacman.x] === 0) {
+                map[pacman.y][pacman.x] = 2; // Transforma em vazio
+                score += 10;
+                scoreEl.innerText = score;
+            }
+
+            // Inteligência artificial simples para o fantasma
+            let ghostMoves = [
+                {dx: 1, dy: 0}, {dx: -1, dy: 0},
+                {dx: 0, dy: 1}, {dx: 0, dy: -1}
+            ].filter(move => !checkCollision(ghost.x + move.dx, ghost.y + move.dy));
+
+            // Evita voltar para trás a menos que seja a única opção
+            if (ghostMoves.length > 1) {
+                ghostMoves = ghostMoves.filter(move => move.dx !== -ghost.dx || move.dy !== -ghost.dy);
+            }
+
+            // Escolhe um movimento aleatório dentre as opções válidas na interseção
+            if (ghostMoves.length > 0) {
+                const choice = ghostMoves[Math.floor(Math.random() * ghostMoves.length)];
+                ghost.dx = choice.dx;
+                ghost.dy = choice.dy;
+            }
+
+            ghost.x += ghost.dx;
+            ghost.y += ghost.dy;
+
+            // Verifica colisão do Fantasma com o Pac-man (Game Over)
+            if (pacman.x === ghost.x && pacman.y === ghost.y) {
+                gameOver = true;
+                alert(`Game Over! Seu score final foi: ${score}`);
+                location.reload();
+            }
+        }
+
+        function draw() {
+            // Limpa o canvas
+            ctx.fillStyle = '#111';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Desenha o labirinto
+            for (let r = 0; r < map.length; r++) {
+                for (let c = 0; c < map[r].length; c++) {
+                    if (map[r][c] === 1) {
+                        ctx.fillStyle = '#0000FF'; // Parede Azul
+                        ctx.fillRect(c * SIZE, r * SIZE, SIZE, SIZE);
+                    } else if (map[r][c] === 0) {
+                        ctx.fillStyle = '#FFB8AE'; // Pastilha Pequena Amarela/Rosa
+                        ctx.beginPath();
+                        ctx.arc(c * SIZE + SIZE/2, r * SIZE + SIZE/2, 3, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+            }
+
+            // Desenha o Pac-Man (Boca abrindo/fechando baseada no tempo)
+            const openClose = Math.sin(Date.now() / 60) > 0;
+            ctx.fillStyle = '#FFFF00';
+            ctx.beginPath();
+            ctx.arc(
+                pacman.x * SIZE + SIZE/2, 
+                pacman.y * SIZE + SIZE/2, 
+                SIZE/2 - 1, 
+                pacman.angle + (openClose ? 0.2 : 0), 
+                pacman.angle + (openClose ? Math.PI * 2 - 0.2 : Math.PI * 2)
+            );
+            ctx.lineTo(pacman.x * SIZE + SIZE/2, pacman.y * SIZE + SIZE/2);
+            ctx.fill();
+
+            // Desenha o Fantasma (Blinky)
+            ctx.fillStyle = ghost.color;
+            ctx.beginPath();
+            // Cabeça redonda
+            ctx.arc(ghost.x * SIZE + SIZE/2, ghost.y * SIZE + SIZE/2, SIZE/2 - 1, Math.PI, 0, false);
+            // Corpo quadrado inferior
+            ctx.lineTo(ghost.x * SIZE + SIZE - 1, ghost.y * SIZE + SIZE);
+            ctx.lineTo(ghost.x * SIZE + 1, ghost.y * SIZE + SIZE);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Olhos simples do fantasma
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(ghost.x * SIZE + 4, ghost.y * SIZE + 4, 4, 4);
+            ctx.fillRect(ghost.x * SIZE + 12, ghost.y * SIZE + 4, 4, 4);
+        }
+
+        // Loop principal do jogo (Sincronizado a uma velocidade controlada por setInterval)
+        setInterval(() => {
+            update();
+            draw();
+        }, 180); // Velocidade do jogo (ms por frame)
+    </script>
 </body>
 </html>
